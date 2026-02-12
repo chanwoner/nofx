@@ -33,32 +33,27 @@ func TestPromptBuilder(t *testing.T) {
 
 		// 验证包含关键内容
 		mustContain := []string{
-			"量化交易AI助手",
-			"分析账户状态",
-			"分析当前持仓",
-			"分析候选币种",
-			"做出决策",
-			"风险优先",
+			"执行成本",
+			"永续合约",
+			"过度交易",
+			"FLIP_COOLDOWN_MIN",
+			"FLIP_MIN_MOVE_PCT",
+			"ADJUST_COOLDOWN_MIN",
+			"翻转保护",
 			"跟踪止盈",
-			"顺势交易",
-			"分批操作",
 			"JSON",
-			"symbol",
-			"action",
-			"reasoning",
+			"open_long",
+			"open_short",
+			"close_long",
+			"close_short",
+			"adjust_tp",
+			"adjust_sl",
+			"hold",
 		}
 
 		for _, keyword := range mustContain {
 			if !strings.Contains(systemPrompt, keyword) {
 				t.Errorf("System prompt should contain '%s'", keyword)
-			}
-		}
-
-		// 验证包含所有有效的action类型
-		actions := []string{"HOLD", "PARTIAL_CLOSE", "FULL_CLOSE", "ADD_POSITION", "OPEN_NEW", "WAIT"}
-		for _, action := range actions {
-			if !strings.Contains(systemPrompt, action) {
-				t.Errorf("System prompt should mention action type '%s'", action)
 			}
 		}
 	})
@@ -73,19 +68,22 @@ func TestPromptBuilder(t *testing.T) {
 
 		// 验证包含关键内容
 		mustContain := []string{
-			"quantitative trading AI",
-			"Analyze Account Status",
-			"Analyze Current Positions",
-			"Analyze Candidate Coins",
-			"Make Decisions",
-			"Risk First",
-			"Trailing Take-Profit",
-			"Trend Following",
-			"Scale Operations",
+			"execution-aware",
+			"perpetual futures",
+			"overtrading",
+			"FLIP_COOLDOWN_MIN",
+			"FLIP_MIN_MOVE_PCT",
+			"ADJUST_COOLDOWN_MIN",
+			"Flip-flop protection",
+			"Trailing/drawdown take-profit",
 			"JSON",
-			"symbol",
-			"action",
-			"reasoning",
+			"open_long",
+			"open_short",
+			"close_long",
+			"close_short",
+			"adjust_tp",
+			"adjust_sl",
+			"hold",
 		}
 
 		for _, keyword := range mustContain {
@@ -121,9 +119,12 @@ func TestPromptBuilder(t *testing.T) {
 			t.Error("User prompt should contain position symbol")
 		}
 
-		// 验证包含决策要求
+		// 验证包含决策要求和新模板字段
 		if !strings.Contains(userPromptZH, "现在请做出决策") {
 			t.Error("User prompt should contain decision requirements")
+		}
+		if !strings.Contains(userPromptZH, "时间周期") {
+			t.Error("User prompt should contain timeframe")
 		}
 
 		// 英文版本
@@ -136,6 +137,9 @@ func TestPromptBuilder(t *testing.T) {
 
 		if !strings.Contains(userPromptEN, "Make Your Decision Now") {
 			t.Error("English user prompt should contain decision requirements")
+		}
+		if !strings.Contains(userPromptEN, "Timeframe") {
+			t.Error("English user prompt should contain timeframe")
 		}
 	})
 }
@@ -308,7 +312,12 @@ func TestValidateDecisionFormat(t *testing.T) {
 	})
 
 	t.Run("ValidActions", func(t *testing.T) {
-		validActions := []string{"HOLD", "PARTIAL_CLOSE", "FULL_CLOSE", "ADD_POSITION", "OPEN_NEW", "WAIT"}
+		validActions := []string{
+			// New action types
+			"open_long", "open_short", "close_long", "close_short", "adjust_tp", "adjust_sl", "hold", "wait",
+			// Legacy action types (backward compatibility)
+			"HOLD", "PARTIAL_CLOSE", "FULL_CLOSE", "ADD_POSITION", "OPEN_NEW", "WAIT",
+		}
 
 		for _, action := range validActions {
 			decisions := []Decision{
@@ -319,8 +328,8 @@ func TestValidateDecisionFormat(t *testing.T) {
 				},
 			}
 
-			// OPEN_NEW需要额外字段
-			if action == "OPEN_NEW" {
+			// New position actions need leverage and size
+			if action == "OPEN_NEW" || action == "open_long" || action == "open_short" {
 				decisions[0].Leverage = 3
 				decisions[0].PositionSizeUSD = 1000
 			}
